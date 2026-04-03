@@ -2,7 +2,7 @@
 
 import type { WorldState } from '../engine/WorldState';
 import type { AutoDifficulty } from '../ui/autoDifficulty';
-import { Entity, vec2, vec2Dist } from '../engine/Entity';
+import { Entity, vec2, vec2Dist, vec2DistWrapped } from '../engine/Entity';
 import { saveSurvivalBestIfBetter, type SurvivalBestRecord } from './survivalScore';
 
 const DEFAULT_GOAL_SEEK_STRENGTH = 0.5;
@@ -66,6 +66,7 @@ export class SurvivalRuntime {
 
   private lastRepAbilityGameYear = -1e9;
   private victoryShown = false;
+  private defeatShown = false;
 
   private vortexEventUntilReal = 0;
   private storedGoalSeekStrength: number | null = null;
@@ -122,6 +123,7 @@ export class SurvivalRuntime {
     this.dashEndReal = 0;
     this.lastRepAbilityGameYear = -1e9;
     this.victoryShown = false;
+    this.defeatShown = false;
     this.vortexEventUntilReal = 0;
     this.storedGoalSeekStrength = null;
     this.plagueEndGameYear = 0;
@@ -169,7 +171,7 @@ export class SurvivalRuntime {
       'auto-flocking',
       'auto-hunger-seek',
       'auto-repulsion',
-      'auto-replication',
+      // Keep auto-replication enabled so the player can mate when in range (handler skips auto-chase for WASD).
     ];
     this.beginRunIfNeeded();
   }
@@ -353,7 +355,6 @@ export class SurvivalRuntime {
   }
 
   beforePurge(dt: number): void {
-    this.beginRunIfNeeded();
     this.gameYear += dt / 60;
 
     const diff = this.difficulty;
@@ -361,6 +362,20 @@ export class SurvivalRuntime {
 
     const alive = this.world.getAlive().filter(e => e.type === 'agent');
     this.peakAgents = Math.max(this.peakAgents, alive.length);
+
+    const survivalAlive = alive.filter(a => a.meta.survival === true);
+    const survivalCount = survivalAlive.length;
+
+    if (
+      !this.victoryShown &&
+      !this.defeatShown &&
+      this.runStartReal != null &&
+      survivalCount < 2
+    ) {
+      this.defeatShown = true;
+      if (this.runActive) this.finalizeRun();
+      this.world.events.emit('survival:defeat', { agents: survivalCount }, this.world.tick);
+    }
 
     if (!this.victoryShown && alive.length >= VICTORY_AGENTS) {
       this.victoryShown = true;
@@ -381,8 +396,11 @@ export class SurvivalRuntime {
       }
 
       const attractors = this.world.getByType('attractor');
+      const W = this.world.config.width;
+      const H = this.world.config.height;
+      const useWrap = this.world.config.boundary === 'wrap';
       for (const at of attractors) {
-        const d = vec2Dist(a.position, at.position);
+        const d = useWrap ? vec2DistWrapped(a.position, at.position, W, H) : vec2Dist(a.position, at.position);
         if (d >= ATTRACT_DAMAGE_RADIUS) continue;
         const t = 1 - d / ATTRACT_DAMAGE_RADIUS;
         hp -= 8 * t * t * dScale * dt;

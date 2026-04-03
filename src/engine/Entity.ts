@@ -6,6 +6,13 @@
 
 import type { Vec2, EntityType, EntityState } from './types';
 
+/** Max stamina for agents (Survival uses full range; UI and rings use this scale). */
+export const AGENT_ENERGY_MAX = 200;
+/** Passive recovery rate (all modes), 2.25× legacy 5/s. */
+export const AGENT_ENERGY_RECOVERY_PER_SEC = 11.25;
+/** Passive recovery does not raise stamina above this (standing still, stalled, free-movement drift, dash idle). */
+export const AGENT_ENERGY_REST_CAP = 150;
+
 let _nextId = 0;
 
 /** Generate a unique entity ID */
@@ -25,6 +32,27 @@ export function vec2Norm(v: Vec2): Vec2 {
   return len > 0 ? { x: v.x / len, y: v.y / len } : { x: 0, y: 0 };
 }
 export function vec2Dist(a: Vec2, b: Vec2): number { return vec2Len(vec2Sub(b, a)); }
+
+/** Shortest toroidal displacement from `a` toward `b` when the world wraps at width/height. */
+export function vec2WrappedDelta(a: Vec2, b: Vec2, width: number, height: number): Vec2 {
+  let dx = b.x - a.x;
+  let dy = b.y - a.y;
+  if (width > 0) {
+    if (dx > width / 2) dx -= width;
+    else if (dx < -width / 2) dx += width;
+  }
+  if (height > 0) {
+    if (dy > height / 2) dy -= height;
+    else if (dy < -height / 2) dy += height;
+  }
+  return { x: dx, y: dy };
+}
+
+/** Shortest distance between two points on a wrapping (torus) world. */
+export function vec2DistWrapped(a: Vec2, b: Vec2, width: number, height: number): number {
+  const d = vec2WrappedDelta(a, b, width, height);
+  return Math.sqrt(d.x * d.x + d.y * d.y);
+}
 export function vec2Clamp(v: Vec2, maxLen: number): Vec2 {
   const len = vec2Len(v);
   return len > maxLen ? vec2Scale(vec2Norm(v), maxLen) : v;
@@ -125,9 +153,9 @@ export class Entity {
     this.mass     = options.mass     ?? 1;
     this.maxSpeed = options.maxSpeed ?? 200; // world-units/sec
 
-    // Energy (0–200)
+    // Energy — agents cap at AGENT_ENERGY_MAX (200)
     let initEnergy = options.energy ?? (this.type === 'agent' ? 100 + Math.random() * 100 : 100);
-    this.energy   = Math.min(200, initEnergy);
+    this.energy   = Math.min(this.type === 'agent' ? AGENT_ENERGY_MAX : 100, initEnergy);
     // Hunger (0–200), only for agents, default random 100–200
     let initHunger = options.hunger ?? (this.type === 'agent' ? 100 + Math.random() * 100 : 100);
     this.hunger   = Math.min(200, Math.max(0, initHunger));
@@ -246,6 +274,11 @@ export class Entity {
     const isMoving = speed > 0.01;
 
     const dashUntil = this.meta.survivalDashUntilReal as number | undefined;
+    const restRecover = (e: number): number =>
+      e >= AGENT_ENERGY_REST_CAP
+        ? e
+        : Math.min(AGENT_ENERGY_REST_CAP, e + AGENT_ENERGY_RECOVERY_PER_SEC * dt);
+
     // Update stalled state first (so player-controlled agents also freeze at 0 energy).
     if (this.energy <= 0 && !this.stalled) {
       this.stalled = true;
@@ -261,7 +294,7 @@ export class Entity {
       !this.stalled
     ) {
       if (!isMoving) {
-        this.energy = Math.min(200, this.energy + 5 * dt);
+        this.energy = restRecover(this.energy);
       }
       return;
     }
@@ -269,7 +302,7 @@ export class Entity {
     // If free movement (attraction/gravity), no energy cost, but still can recover if speed == 0
     if (this.freeMovement) {
       // Recover even while being dragged (e.g. vortex pull), because the agent itself is "resting".
-      this.energy = Math.min(200, this.energy + 5 * dt);
+      this.energy = restRecover(this.energy);
       return;
     }
 
@@ -278,7 +311,7 @@ export class Entity {
       // Stalled agents cannot move on their own; set velocity to 0
       this.velocity = { x: 0, y: 0 };
       // Recover energy when stalled and not moving
-      this.energy = Math.min(200, this.energy + 5 * dt);
+      this.energy = restRecover(this.energy);
       return;
     }
 
@@ -289,7 +322,7 @@ export class Entity {
       this.energy = Math.max(0, this.energy - cost);
     } else {
       // Recover energy when standing still (speed == 0)
-      this.energy = Math.min(200, this.energy + 5 * dt);
+      this.energy = restRecover(this.energy);
     }
   }
 

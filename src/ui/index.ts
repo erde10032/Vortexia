@@ -30,7 +30,13 @@ import {
   survivalRewardForRank,
   saveSurvivalBestIfBetter,
 } from '../survival/survivalScore';
-import { openSurvivalManualModal, openSurvivalScoreModal, openSurvivalVictoryModal } from './survivalDialogs';
+import {
+  openSurvivalDefeatModal,
+  openSurvivalManualModal,
+  openSurvivalScoreModal,
+  openSurvivalVictoryModal,
+} from './survivalDialogs';
+import { SURVIVAL_CHALLENGE_MIN_AMOEBA } from '../survival/survivalConstants';
 import { ALL_MISSIONS }      from '../challenge/missions';
 import type { ScoreBreakdown } from '../challenge/ChallengeTypes';
 import { ObserverMode }      from './ObserverMode';
@@ -199,8 +205,28 @@ export function bootstrap(): void {
     );
 
     const btnChallenge = document.getElementById('btn-challenge') as HTMLButtonElement;
+    const challengeSlot = document.getElementById('toolbar-challenge-slot');
+
+    function countSurvivalAmoeba(): number {
+      return world.getAlive().filter(e => e.type === 'agent' && e.meta.survival === true).length;
+    }
+
+    function syncSurvivalChallengeChrome(): void {
+      if (!btnChallenge) return;
+      if (mode !== 'survival') {
+        challengeSlot?.classList.remove('toolbar-challenge-slot--locked');
+        btnChallenge.disabled = false;
+        return;
+      }
+      const ok = countSurvivalAmoeba() >= SURVIVAL_CHALLENGE_MIN_AMOEBA;
+      btnChallenge.disabled = !ok;
+      if (!ok) challengeSlot?.classList.add('toolbar-challenge-slot--locked');
+      else challengeSlot?.classList.remove('toolbar-challenge-slot--locked');
+    }
+
     if (btnChallenge) {
       btnChallenge.addEventListener('click', () => {
+        if (mode === 'survival' && countSurvivalAmoeba() < SURVIVAL_CHALLENGE_MIN_AMOEBA) return;
         challengePanel.setStyle(mode === 'survival' ? 'survival' : 'standard');
         challengePanel.show();
       });
@@ -227,6 +253,25 @@ export function bootstrap(): void {
         () => {
           loop.resume();
           UIState.set('simRunning', true);
+        },
+        () => {
+          (document.getElementById('btn-reset') as HTMLButtonElement | null)?.click();
+        },
+      );
+    }) as (e: SimEvent<unknown>) => void);
+
+    world.events.on('survival:defeat', ((e: SimEvent<{ agents: number }>) => {
+      if (mode !== 'survival') return;
+      if (survivalRt) {
+        const rec = survivalRt.buildBestRecordCandidate(world.getByType('agent').length);
+        if (rec) saveSurvivalBestIfBetter(rec);
+      }
+      loop.pause();
+      UIState.set('simRunning', false);
+      openSurvivalDefeatModal(
+        e.data.agents,
+        () => {
+          survivalDifficultyModal.classList.remove('challenge-panel--hidden');
         },
         () => {
           (document.getElementById('btn-reset') as HTMLButtonElement | null)?.click();
@@ -496,7 +541,11 @@ export function bootstrap(): void {
       }
     }
 
-    loop.onTick   = () => { challengeEngine.tick(); spreadFoodTick(); };
+    loop.onTick = () => {
+      challengeEngine.tick();
+      spreadFoodTick();
+      syncSurvivalChallengeChrome();
+    };
     loop.onRender = (w, alpha) => renderer.draw(w, alpha, observer.tick());
 
     controls.setOnReset(() => {
@@ -513,6 +562,7 @@ export function bootstrap(): void {
       if (ruleList) ruleList.refresh();
     });
     seedCurrentMode();
+    syncSurvivalChallengeChrome();
 
     function openModeModal(): void {
       autoDifficultyModal.classList.add('challenge-panel--hidden');
@@ -837,6 +887,7 @@ export function bootstrap(): void {
         observer.enter();
       }
       if (e.code === 'KeyC' && !challengePanel.isVisible) {
+        if (mode === 'survival' && countSurvivalAmoeba() < SURVIVAL_CHALLENGE_MIN_AMOEBA) return;
         e.preventDefault();
         challengePanel.setStyle(mode === 'survival' ? 'survival' : 'standard');
         challengePanel.show();

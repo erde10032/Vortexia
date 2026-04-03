@@ -15,8 +15,7 @@
 //    - Meta: any custom meta keys
 // ─────────────────────────────────────────────
 
-import type { Entity }     from '../engine/Entity';
-import { vec2Len }         from '../engine/Entity';
+import { type Entity, AGENT_ENERGY_MAX, vec2Len } from '../engine/Entity';
 import { UIState }         from './UIState';
 import { entityTypeLabel } from './entityDisplay';
 import type { SurvivalRuntime } from '../survival/SurvivalRuntime';
@@ -76,7 +75,10 @@ export class EntityInspector {
     }
 
     const speed = vec2Len(entity.velocity).toFixed(1);
-    const energyPct = Math.max(0, Math.min(100, entity.energy));
+    const energyPct =
+      entity.type === 'agent'
+        ? Math.max(0, Math.min(100, (entity.energy / AGENT_ENERGY_MAX) * 100))
+        : Math.max(0, Math.min(100, entity.energy));
     const hungerPct = entity.hunger !== undefined ? (entity.hunger / 200) * 100 : 0;
     const surv = this.ctx.appMode === 'survival' && entity.type === 'agent' && entity.meta.survival === true;
     const healthPct = surv ? entity.health : 0;
@@ -315,7 +317,10 @@ export class EntityInspector {
       age.textContent = entity.ageYears.toFixed(1);
     }
 
-    const pct = Math.max(0, Math.min(100, entity.energy));
+    const pct =
+      entity.type === 'agent'
+        ? Math.max(0, Math.min(100, (entity.energy / AGENT_ENERGY_MAX) * 100))
+        : Math.max(0, Math.min(100, entity.energy));
     if (fill)  fill.style.width  = `${pct}%`;
     if (eval_) eval_.textContent = entity.energy.toFixed(1);
 

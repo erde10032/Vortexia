@@ -84,6 +84,7 @@ export type SimEventType =
   | 'tick:end'
   // ── Survival mode ──
   | 'survival:victory'
+  | 'survival:defeat'
   | 'survival:event'
   | 'survival:ability'
   // ── Challenge mode ──

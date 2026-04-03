@@ -24,6 +24,9 @@ export type {
 // Entity + Vec2 math utilities
 export {
   Entity,
+  AGENT_ENERGY_MAX,
+  AGENT_ENERGY_REST_CAP,
+  AGENT_ENERGY_RECOVERY_PER_SEC,
   vec2,
   vec2Add,
   vec2Sub,

@@ -1,6 +1,7 @@
 // Survival mode: score and manual overlays (same shell classes as challenge panel).
 
 import { loadSurvivalBest } from '../survival/survivalScore';
+import { SURVIVAL_CHALLENGE_MIN_AMOEBA } from '../survival/survivalConstants';
 
 function formatDuration(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -87,7 +88,11 @@ export function openSurvivalManualModal(): void {
             <strong>Random events:</strong> rockfall (warning shadow, then rocks), stronger vortex pull for a while, or plague that mutates a portion of NPCs (not your amoeba). Infected cannot be played.
           </p>
           <p class="cpanel-card-desc">
-            <strong>Challenges:</strong> each mission grants a <em>one-time</em> reward of food and amoeba (rank S → 5 amoeba + 10 food).
+            <strong>Challenges:</strong> available only with at least <strong>${SURVIVAL_CHALLENGE_MIN_AMOEBA} live amoeba</strong> in the world.
+            Each mission grants a <em>one-time</em> reward of food and amoeba (rank S → 5 amoeba + 10 food).
+          </p>
+          <p class="cpanel-card-desc">
+            <strong>Defeat:</strong> if fewer than <strong>2 amoeba</strong> remain after you have started a run, the population has collapsed — you can lower difficulty or try again.
           </p>
           <p class="cpanel-card-desc">
             <strong>Abilities (your amoeba):</strong> Shield — ~5s invuln or until a rock breaks it; ~2 min CD (real). Dash — 2× speed, no stamina cost; ~1 min CD (real). Stimulation of reproduction — clears reproduction cooldown for <em>all</em> amoeba; 6 game years (~6 min real) global CD.
@@ -108,6 +113,63 @@ export function openSurvivalManualModal(): void {
   document.addEventListener('keydown', onEsc);
   el.querySelector('.cpanel-backdrop')?.addEventListener('click', close);
   el.querySelector('#surv-man-x')?.addEventListener('click', close);
+  document.body.appendChild(el);
+}
+
+export function openSurvivalDefeatModal(
+  agentsRemaining: number,
+  onLowerDifficulty?: () => void,
+  onTryAgain?: () => void,
+): void {
+  const el = document.createElement('div');
+  el.className = 'challenge-panel';
+  el.innerHTML = `
+    <div class="cpanel-backdrop"></div>
+    <div class="cpanel-inner">
+      <div class="cpanel-header">
+        <span class="cpanel-header-icon">✦</span>
+        <h2 class="cpanel-title">DEFEAT</h2>
+        <p class="cpanel-subtitle">Population collapsed</p>
+        <button type="button" class="cpanel-close" id="surv-def-x" title="Close">✕</button>
+      </div>
+      <div class="cpanel-cards" style="display:block;max-width:560px;margin:0 auto;text-align:left">
+        <div class="cpanel-card" style="--card-color:#FF2D78">
+          <p class="cpanel-card-desc">
+            <strong>Too few amoeba left.</strong> Survival needs at least <strong>2</strong> to continue; you now have <strong>${agentsRemaining}</strong>.
+          </p>
+          <p class="cpanel-card-desc">
+            Lower difficulty for a gentler run, or reset and try again on the same preset.
+          </p>
+          <div class="setup-actions" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+            <button type="button" class="btn setup-btn-close" id="surv-def-lower">Lower difficulty</button>
+            <button type="button" class="btn setup-btn-apply" id="surv-def-retry">Try again</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const close = () => {
+    el.remove();
+    document.removeEventListener('keydown', onEsc);
+  };
+  const onEsc = (e: KeyboardEvent) => {
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  };
+  document.addEventListener('keydown', onEsc);
+  el.querySelector('.cpanel-backdrop')?.addEventListener('click', close);
+  el.querySelector('#surv-def-x')?.addEventListener('click', close);
+  el.querySelector('#surv-def-lower')?.addEventListener('click', () => {
+    close();
+    onLowerDifficulty?.();
+  });
+  el.querySelector('#surv-def-retry')?.addEventListener('click', () => {
+    close();
+    // Defer so the modal unmounts before reset runs (toolbar reset listener + SimControls).
+    window.setTimeout(() => onTryAgain?.(), 0);
+  });
   document.body.appendChild(el);
 }
 

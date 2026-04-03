@@ -21,7 +21,7 @@
 // ─────────────────────────────────────────────
 
 import type { RuleHandler } from '../RuleEngine';
-import { Entity, vec2Dist } from '../../Entity';
+import { Entity, vec2Dist, vec2DistWrapped, vec2WrappedDelta } from '../../Entity';
 import { WorldState } from '../../WorldState';
 
 export const replicationHandler: RuleHandler = (entity, world, rule, _dt) => {
@@ -47,9 +47,22 @@ export const replicationHandler: RuleHandler = (entity, world, rule, _dt) => {
   // Energy check (need at least 50)
   if (entity.energy < 50) return;
 
-  const possibleMates = world
-    .getNearby(entity.position.x, entity.position.y, mateSearchRadius, entity.id)
-    .filter(e => e.type === 'agent' && !e.isDead() && e.gender !== entity.gender);
+  const wrap = world.config.boundary === 'wrap';
+  const W = world.config.width;
+  const H = world.config.height;
+  const possibleMates = wrap
+    ? world
+        .getByType('agent')
+        .filter(
+          e =>
+            e.id !== entity.id &&
+            !e.isDead() &&
+            e.gender !== entity.gender &&
+            vec2DistWrapped(entity.position, e.position, W, H) <= mateSearchRadius,
+        )
+    : world
+        .getNearby(entity.position.x, entity.position.y, mateSearchRadius, entity.id)
+        .filter(e => e.type === 'agent' && !e.isDead() && e.gender !== entity.gender);
   if (possibleMates.length === 0) return;
 
   const readyMates = possibleMates.filter((mate) => {
@@ -63,10 +76,13 @@ export const replicationHandler: RuleHandler = (entity, world, rule, _dt) => {
   });
   if (readyMates.length === 0) return;
 
+  const distBetween = (a: typeof entity, b: typeof entity): number =>
+    wrap ? vec2DistWrapped(a.position, b.position, W, H) : vec2Dist(a.position, b.position);
+
   let mate = readyMates[0];
-  let nearestDistance = vec2Dist(entity.position, mate.position);
+  let nearestDistance = distBetween(entity, mate);
   for (let i = 1; i < readyMates.length; i++) {
-    const d = vec2Dist(entity.position, readyMates[i].position);
+    const d = distBetween(entity, readyMates[i]);
     if (d < nearestDistance) {
       mate = readyMates[i];
       nearestDistance = d;
@@ -75,8 +91,15 @@ export const replicationHandler: RuleHandler = (entity, world, rule, _dt) => {
 
   // Move toward a ready partner before contact, so only truly-ready pairs collide
   if (nearestDistance > contactRadius) {
-    const dx = mate.position.x - entity.position.x;
-    const dy = mate.position.y - entity.position.y;
+    if (entity.meta.playerControlled === true) {
+      // Player steers with WASD; do not apply chase force.
+      return;
+    }
+    const delta = wrap
+      ? vec2WrappedDelta(entity.position, mate.position, W, H)
+      : { x: mate.position.x - entity.position.x, y: mate.position.y - entity.position.y };
+    const dx = delta.x;
+    const dy = delta.y;
     const len = Math.sqrt(dx * dx + dy * dy);
     if (len > 0) {
       const chaseForce = 220 * rule.strength;

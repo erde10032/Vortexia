@@ -20,7 +20,7 @@
 //    • Velocity vector    (short neon line, skipped above VELOCITY_MAX)
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Entity }     from '../../engine/Entity';
+import { type Entity, AGENT_ENERGY_MAX } from '../../engine/Entity';
 import { ENTITY_VISUALS } from '../RendererConfig';
 import { spriteLoader }    from '../SpriteLoader';
 
@@ -364,7 +364,7 @@ export class LayerEntities {
         const hungerR  = spriteHalf * 1.2;
 
         // ── Fatigue (energy) ring ───────────────────────────────────────────
-        const energyFraction = Math.max(0, Math.min(1, entity.energy / 100));
+        const energyFraction = Math.max(0, Math.min(1, entity.energy / AGENT_ENERGY_MAX));
         const eStart = -Math.PI / 2 + this.frame * 0.01;
         const eEnd   = eStart + energyFraction * Math.PI * 2;
 

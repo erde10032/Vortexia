@@ -119,6 +119,8 @@ export class RuleEngine {
             (rule.params.targetType as string) === 'attractor'
           ) {
             /* allow — goal_seek sets freeMovement for cost-free drift toward attractor */
+          } else if (rule.type === 'replication') {
+            /* allow — mates already in contact can reproduce while stamina recovers */
           } else {
             continue;
           }

@@ -25,7 +25,8 @@ export const AUTO_DIFFICULTY_PRESETS: Record<AutoDifficulty, AutoDifficultyConfi
     attractor: 1,
     obstacle: 3,
     food: 30,
-    foodSpreadChance: 0.000055,
+    // Same spread rate as Medium (see medium); both remain faster than Hard.
+    foodSpreadChance: 0.00004,
   },
   medium: {
     males: 2,
@@ -35,7 +36,7 @@ export const AUTO_DIFFICULTY_PRESETS: Record<AutoDifficulty, AutoDifficultyConfi
     attractor: 2,
     obstacle: 7,
     food: 15,
-    foodSpreadChance: 0.000055,
+    foodSpreadChance: 0.00004,
   },
   hard: {
     males: 1,
