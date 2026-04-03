@@ -170,7 +170,10 @@ export function bootstrap(): void {
     renderer.init(WORLD_W, WORLD_H);
     if (survivalRt) {
       loop.beforeIntegrate = (_w, dt) => survivalRt!.beforeIntegrate(dt);
-      loop.beforePurge = (_w, dt) => survivalRt!.beforePurge(dt);
+      loop.beforePurge = (_w, dt) => {
+        world.config.simSpeed = loop.speed;
+        survivalRt!.beforePurge(dt);
+      };
       renderer.setSurvivalOverlay((ctx, sx, sy) => survivalRt!.drawOverlay(ctx, sx, sy));
     } else {
       loop.beforeIntegrate = null;
@@ -263,10 +266,11 @@ export function bootstrap(): void {
       banner.style.boxShadow =
         '0 0 0 1px rgba(125, 249, 255, 0.35) inset, 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 34px rgba(80, 238, 255, 0.38)';
       if (bannerTimer) window.clearTimeout(bannerTimer);
+      const sp = Math.max(0.1, loop.speed);
       bannerTimer = window.setTimeout(() => {
         banner.style.opacity = '0';
         banner.style.transform = 'translateX(-50%) translateY(-10px) scale(0.98)';
-      }, 2200);
+      }, Math.max(350, 2200 / sp));
     };
 
     world.events.on('survival:event', ((e: SimEvent<{ name: string }>) => {
@@ -522,7 +526,10 @@ export function bootstrap(): void {
       if (nextMode === 'survival') {
         survivalRt = new SurvivalRuntime(world, autoDifficultyLevel, WORLD_W, WORLD_H);
         loop.beforeIntegrate = (_w, dt) => survivalRt!.beforeIntegrate(dt);
-        loop.beforePurge = (_w, dt) => survivalRt!.beforePurge(dt);
+        loop.beforePurge = (_w, dt) => {
+        world.config.simSpeed = loop.speed;
+        survivalRt!.beforePurge(dt);
+      };
         renderer.setSurvivalOverlay((ctx, sx, sy) => survivalRt!.drawOverlay(ctx, sx, sy));
       } else {
         survivalRt = null;
@@ -657,7 +664,10 @@ export function bootstrap(): void {
           survivalRt.applySaveState(snap.survivalState);
         }
         loop.beforeIntegrate = (_w, dt) => survivalRt!.beforeIntegrate(dt);
-        loop.beforePurge = (_w, dt) => survivalRt!.beforePurge(dt);
+        loop.beforePurge = (_w, dt) => {
+        world.config.simSpeed = loop.speed;
+        survivalRt!.beforePurge(dt);
+      };
         renderer.setSurvivalOverlay((ctx, sx, sy) => survivalRt!.drawOverlay(ctx, sx, sy));
       } else {
         survivalRt = null;

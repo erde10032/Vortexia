@@ -85,7 +85,8 @@ const predationHandler: RuleHandler = (entity, world, rule, _dt) => {
     }
     if (eatCooldownMs > 0 && entity.type === 'agent') {
       if (!playerOnlyCooldown || entity.meta.playerControlled === true) {
-        entity.meta.survivalEatCooldownUntilReal = performance.now() + eatCooldownMs;
+        const sp = world.config.simSpeed ?? 1;
+        entity.meta.survivalEatCooldownUntilReal = performance.now() + eatCooldownMs / sp;
       }
     }
     break;

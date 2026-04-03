@@ -153,10 +153,14 @@ export class EntityInspector {
           <div class="inspector-stat-top">
             <span class="inspector-stat-label">Abilities</span>
           </div>
-          <div class="inspector-ability-row">
-            <button type="button" class="btn inspector-ab-btn" id="ins-ab-shield" title="Cooldown 2 min real">Shield (1)</button>
-            <button type="button" class="btn inspector-ab-btn" id="ins-ab-dash" title="Cooldown 1 min real">Dash (2)</button>
-            <button type="button" class="btn inspector-ab-btn" id="ins-ab-rep" title="Every 6 game years (~6 min real, global)">Stimulation of reproduction (3)</button>
+          <div class="inspector-ability-rows">
+            <div class="inspector-ability-row">
+              <button type="button" class="btn inspector-ab-btn" id="ins-ab-shield" title="Cooldown 2 min real">Shield (1)</button>
+              <button type="button" class="btn inspector-ab-btn" id="ins-ab-dash" title="Cooldown 1 min real">Dash (2)</button>
+            </div>
+            <div class="inspector-ability-row inspector-ability-row--rep">
+              <button type="button" class="btn inspector-ab-btn inspector-ab-btn--rep" id="ins-ab-rep" title="Stimulation of reproduction — clears all amoeba repro cooldowns; 6 game years global CD">Reproduction (3)</button>
+            </div>
           </div>
           <p class="inspector-ability-hint" id="ins-ab-hint"></p>
           <p class="inspector-ability-hint" id="ins-ab-cd"></p>
@@ -361,8 +365,8 @@ export class EntityInspector {
         const onCd = repRemMs > 0;
         repBtn.disabled = onCd;
         repBtn.textContent = onCd
-          ? `Stimulation of reproduction (3) · ${this._formatMs(repRemMs)}`
-          : 'Stimulation of reproduction (3)';
+          ? `Reproduction (3)\n${this._formatMs(repRemMs)}`
+          : 'Reproduction (3)';
       }
       if (cdEl) {
         cdEl.textContent =

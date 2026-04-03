@@ -60,6 +60,8 @@ export interface WorldConfig {
   movementEnergyCost: number;
   /** Set in survival mode — used by rules (e.g. predation heal scaling). */
   survivalDifficulty?: 'easy' | 'medium' | 'hard';
+  /** SimLoop speed (1–10); updated each tick for survival timing + rules. */
+  simSpeed?: number;
 }
 
 // ─── Simulation Stats ────────────────────────

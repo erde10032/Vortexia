@@ -70,7 +70,8 @@ export class SurvivalRuntime {
   private vortexEventUntilReal = 0;
   private storedGoalSeekStrength: number | null = null;
 
-  private nextRandomEventReal = 0;
+  /** Next survival random event when `gameYear` reaches this (game-time, scales with sim speed). */
+  private nextRandomEventGameYear = 0;
 
   plagueEndGameYear = 0;
 
@@ -94,20 +95,18 @@ export class SurvivalRuntime {
   }
 
   private scheduleNextEvent(): void {
-    // Event frequency by difficulty:
-    // easy   -> old cadence (~45..100s)
-    // medium -> a bit more frequent
-    // hard   -> more frequent than medium, but still below the temporary 8..16s burst cadence
-    let minSec = 45;
-    let maxSec = 100;
+    // Spaced in game years so real-world frequency scales with sim speed (1 game year ≈ 1 min at 1×).
+    // Former real-time targets: easy ~45–100s → 0.75–1.67y, medium 35–75s, hard 25–55s.
+    let minY = 45 / 60;
+    let maxY = 100 / 60;
     if (this.difficulty === 'medium') {
-      minSec = 35;
-      maxSec = 75;
+      minY = 35 / 60;
+      maxY = 75 / 60;
     } else if (this.difficulty === 'hard') {
-      minSec = 25;
-      maxSec = 55;
+      minY = 25 / 60;
+      maxY = 55 / 60;
     }
-    this.nextRandomEventReal = performance.now() + (minSec + Math.random() * (maxSec - minSec)) * 1000;
+    this.nextRandomEventGameYear = this.gameYear + minY + Math.random() * (maxY - minY);
   }
 
   /** Full reset on simulation toolbar reset */
@@ -185,11 +184,12 @@ export class SurvivalRuntime {
 
   tryShield(): boolean {
     const now = performance.now();
+    const simSpeed = this.world.config.simSpeed ?? 1;
     const shieldCdYears = SHIELD_CD_MS / GAME_YEAR_REAL_MS;
     if (this.gameYear - this.lastShieldUseGameYear < shieldCdYears) return false;
     if (!this.playerAgentId) return false;
     this.lastShieldUseGameYear = this.gameYear;
-    this.shieldEndReal = now + SHIELD_MS;
+    this.shieldEndReal = now + SHIELD_MS / simSpeed;
     const p = this.world.getEntity(this.playerAgentId);
     if (p) this.world.events.emit('survival:ability', { kind: 'shield', entityId: p.id }, this.world.tick);
     return true;
@@ -197,11 +197,12 @@ export class SurvivalRuntime {
 
   tryDash(): boolean {
     const now = performance.now();
+    const simSpeed = this.world.config.simSpeed ?? 1;
     const dashCdYears = DASH_CD_MS / GAME_YEAR_REAL_MS;
     if (this.gameYear - this.lastDashUseGameYear < dashCdYears) return false;
     if (!this.playerAgentId) return false;
     this.lastDashUseGameYear = this.gameYear;
-    this.dashEndReal = now + DASH_MS;
+    this.dashEndReal = now + DASH_MS / simSpeed;
     const p = this.world.getEntity(this.playerAgentId);
     if (p) this.world.events.emit('survival:ability', { kind: 'dash', entityId: p.id }, this.world.tick);
     return true;
@@ -313,6 +314,7 @@ export class SurvivalRuntime {
     if (state.playerAgentId) {
       this.setPlayerAgent(state.playerAgentId);
     }
+    this.scheduleNextEvent();
   }
 
   beforeIntegrate(dt: number): void {
@@ -436,7 +438,7 @@ export class SurvivalRuntime {
       }
     }
 
-    if (now >= this.nextRandomEventReal) {
+    if (this.gameYear >= this.nextRandomEventGameYear) {
       this.triggerRandomEvent();
       this.scheduleNextEvent();
     }
@@ -523,7 +525,8 @@ export class SurvivalRuntime {
       this.storedGoalSeekStrength = r.strength;
     }
     r.strength = (this.storedGoalSeekStrength ?? 0.5) * 1.65;
-    this.vortexEventUntilReal = performance.now() + 28_000;
+    const simSpeed = this.world.config.simSpeed ?? 1;
+    this.vortexEventUntilReal = performance.now() + 28_000 / simSpeed;
   }
 
   private startPlague(): void {
