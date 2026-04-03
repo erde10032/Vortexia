@@ -3993,10 +3993,15 @@
       transition: width 0.22s ease-out;
     }
 
+    /* Hide main shell until bootstrap (after asset preload); avoids toolbar flash under menu */
+    body.app-booting #app {
+      visibility: hidden;
+    }
+
   </style>
-  <script type="module" crossorigin src="/assets/index-CR_Uo3P_.js"></script>
+  <script type="module" crossorigin src="/assets/index-DXrhIChj.js"></script>
 </head>
-<body>
+<body class="app-booting">
   <div id="asset-loading-splash" class="asset-loading-splash" aria-hidden="true" role="status">
     <div class="asset-loading-splash__backdrop" aria-hidden="true"></div>
     <div class="asset-loading-splash__card">
@@ -4198,8 +4203,8 @@
     </div>
   </div>
 
-  <!-- ══ MAIN MENU — PREMIUM ══ -->
-  <div id="mode-modal" class="mode-modal">
+  <!-- ══ MAIN MENU — PREMIUM (shown from bootstrap() after preload) ══ -->
+  <div id="mode-modal" class="mode-modal hidden">
 
     <!-- Underwater background -->
     <div class="menu-bg"></div>

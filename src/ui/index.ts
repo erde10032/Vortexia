@@ -114,7 +114,10 @@ interface SpawnConfig {
  * Call once after DOM is ready.
  */
 export function bootstrap(): void {
+  document.body.classList.remove('app-booting');
+
   const modeModal = document.getElementById('mode-modal')!;
+  modeModal.classList.remove('hidden');
   const autoDifficultyModal = document.getElementById('auto-difficulty-modal')!;
   const survivalDifficultyModal = document.getElementById('survival-difficulty-modal')!;
   const adiffClose = document.getElementById('adiff-close');
