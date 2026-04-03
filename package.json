@@ -3,8 +3,6 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-	"build": "npx vite build",
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
@@ -14,6 +12,6 @@
   "license": "ISC",
   "description": "Vortexia — ecosystem simulation UI",
   "devDependencies": {
-    "vite": "^8.0.1"
+    "vite": "^8.0.3"
   }
 }
