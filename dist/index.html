@@ -3883,10 +3883,131 @@
       box-shadow: 0 0 18px rgba(0,245,255,0.18), 0 0 26px rgba(191,95,255,0.10) !important;
     }
 
+    /* ─── First-load asset splash (Russian UI) ───────────────────────── */
+    .asset-loading-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition:
+        opacity 0.45s cubic-bezier(0.2, 0.75, 0.2, 1),
+        visibility 0.45s step-end;
+    }
+    .asset-loading-splash--visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+      transition:
+        opacity 0.38s cubic-bezier(0.2, 0.75, 0.2, 1),
+        visibility 0s step-start;
+    }
+    .asset-loading-splash--leaving {
+      opacity: 0 !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+      transition:
+        opacity 0.5s cubic-bezier(0.35, 0, 0.2, 1),
+        visibility 0.5s step-end !important;
+    }
+    .asset-loading-splash__backdrop {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 85% 65% at 50% 38%, rgba(12, 32, 58, 0.55) 0%, transparent 55%),
+        radial-gradient(ellipse 70% 50% at 80% 80%, rgba(80, 40, 120, 0.12) 0%, transparent 45%),
+        linear-gradient(165deg, #050810 0%, #080c18 40%, #060a14 100%);
+      backdrop-filter: blur(18px);
+    }
+    .asset-loading-splash__card {
+      position: relative;
+      width: min(360px, 92vw);
+      padding: 2rem 1.75rem 1.85rem;
+      border-radius: 16px;
+      border: 1px solid rgba(0, 245, 255, 0.28);
+      background: linear-gradient(
+        145deg,
+        rgba(8, 16, 34, 0.92) 0%,
+        rgba(10, 22, 48, 0.88) 50%,
+        rgba(6, 14, 30, 0.94) 100%
+      );
+      box-shadow:
+        0 0 0 1px rgba(0, 245, 255, 0.06) inset,
+        0 12px 48px rgba(0, 0, 0, 0.55),
+        0 0 60px rgba(0, 200, 255, 0.12),
+        0 0 100px rgba(120, 80, 255, 0.06);
+      text-align: center;
+    }
+    .asset-loading-splash__glow {
+      position: absolute;
+      width: 140px;
+      height: 140px;
+      left: 50%;
+      top: -36px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0, 245, 255, 0.22) 0%, transparent 68%);
+      filter: blur(2px);
+      pointer-events: none;
+    }
+    .asset-loading-splash__title {
+      position: relative;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      text-shadow: 0 0 20px rgba(0, 245, 255, 0.45);
+      margin: 0 0 1.1rem;
+    }
+    .asset-loading-splash__pct {
+      position: relative;
+      font-family: var(--font-mono);
+      font-size: clamp(2.1rem, 7vw, 2.75rem);
+      font-weight: 700;
+      color: rgba(224, 238, 255, 0.96);
+      letter-spacing: 0.06em;
+      margin: 0 0 1.25rem;
+      text-shadow: 0 0 24px rgba(0, 245, 255, 0.25);
+    }
+    .asset-loading-splash__bar {
+      position: relative;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(0, 245, 255, 0.08);
+      border: 1px solid rgba(0, 245, 255, 0.15);
+      overflow: hidden;
+    }
+    .asset-loading-splash__bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(0, 245, 255, 0.85), rgba(191, 95, 255, 0.75), rgba(0, 245, 255, 0.65));
+      box-shadow: 0 0 14px rgba(0, 245, 255, 0.35);
+      transition: width 0.22s ease-out;
+    }
+
   </style>
-  <script type="module" crossorigin src="/assets/index-CspD1M8P.js"></script>
+  <script type="module" crossorigin src="/assets/index-CR_Uo3P_.js"></script>
 </head>
 <body>
+  <div id="asset-loading-splash" class="asset-loading-splash" aria-hidden="true" role="status">
+    <div class="asset-loading-splash__backdrop" aria-hidden="true"></div>
+    <div class="asset-loading-splash__card">
+      <div class="asset-loading-splash__glow" aria-hidden="true"></div>
+      <p class="asset-loading-splash__title">Загрузка</p>
+      <p class="asset-loading-splash__pct" id="asset-loading-pct">0%</p>
+      <div class="asset-loading-splash__bar" aria-hidden="true">
+        <div class="asset-loading-splash__bar-fill" id="asset-loading-bar-fill"></div>
+      </div>
+    </div>
+  </div>
   <div id="app">
 
     <!-- ── TOOLBAR ── -->
