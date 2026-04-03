@@ -15,19 +15,27 @@
 
 import type { EntityType } from '../engine/types';
 
-const FOOD_PATH_DEFAULT = 'assets/game/leaf_food.png';
+/** Bundled URLs — same pattern as `backgroundAssets.ts` so `vite build` / preview resolve assets. */
+import leafFoodUrl from '../../assets/game/leaf_food.png?url';
+import leafFood2Url from '../../assets/game/leaf_food_2.png?url';
+import vortexAttractorUrl from '../../assets/game/vortex_attractor.png?url';
+import stoneObstacleUrl from '../../assets/game/stone_obstacle.png?url';
+import amoebaMaleUrl from '../../assets/game/amoeba_agent.png?url';
+import amoebaFemaleUrl from '../../assets/game/amoeba_agent_2.png?url';
+
+const FOOD_PATH_DEFAULT = leafFoodUrl;
 /** Used when the active background texture is from `assets/game/easy/`. */
-const FOOD_PATH_EASY_BG = 'assets/game/leaf_food_2.png';
+const FOOD_PATH_EASY_BG = leafFood2Url;
 
 /** Non-agent sprites keyed by entity type (food loaded separately — two variants). */
 const SPRITE_PATHS: Record<Exclude<EntityType, 'agent' | 'food'>, string> = {
-  attractor: 'assets/game/vortex_attractor.png',
-  obstacle:  'assets/game/stone_obstacle.png',
+  attractor: vortexAttractorUrl,
+  obstacle:  stoneObstacleUrl,
 };
 
 const AGENT_SPRITE_BY_GENDER: Record<'male' | 'female', string> = {
-  male:   'assets/game/amoeba_agent.png',
-  female: 'assets/game/amoeba_agent_2.png',
+  male:   amoebaMaleUrl,
+  female: amoebaFemaleUrl,
 };
 
 /** Normalized centroid of opaque pixels (0–1). Falls back to (0.5, 0.5) if unreadable. */

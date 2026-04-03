@@ -17,11 +17,11 @@
 //    music.stop();
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TRACKS = [
-  'assets/audio/bg_music_1.mp3',
-  'assets/audio/bg_music_2.mp3',
-  'assets/audio/bg_music_3.mp3',
-];
+import bgMusic1 from '../../assets/audio/bg_music_1.mp3?url';
+import bgMusic2 from '../../assets/audio/bg_music_2.mp3?url';
+import bgMusic3 from '../../assets/audio/bg_music_3.mp3?url';
+
+const TRACKS = [bgMusic1, bgMusic2, bgMusic3];
 
 export class MusicManager {
   private _audio: HTMLAudioElement;
