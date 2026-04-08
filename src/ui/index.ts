@@ -63,10 +63,133 @@ const FOOD_SPREAD_RADIUS = 80;
 const FOOD_SPREAD_MIN_DISTANCE = 18;
 /** Hard cap on food entities in the world (spread + manual adds + seed). */
 const MAX_FOOD_ENTITIES = 250;
+const ONBOARDING_SEEN_KEY = 'vortexia:onboarding:seen:v1';
 
 /** Set after first startSimulation — applies Auto preset from difficulty modal while in-game. */
 let applyStandardDifficultyPick: (() => void) | null = null;
 let applyStandardSurvivalPick: (() => void) | null = null;
+
+function openOnboardingModal(contextMode: SimMode | null, onClose?: () => void): void {
+  const existing = document.getElementById('onboarding-modal');
+  if (existing) existing.remove();
+
+  const steps: Array<{ title: string; body: string }> = [
+    {
+      title: 'Welcome to Vortexia',
+      body: 'Grow and stabilize your amoeba ecosystem. Keep the population alive, adapt to conditions, and experiment with different modes.',
+    },
+    {
+      title: 'Basic Controls',
+      body:
+        'Toolbar buttons: Start/Pause, Reset, Challenge, Observer, Survival Manual, Score, Speed, Mode, Difficulty, Setup, Save, Load. Keyboard: Space (Start/Pause), Shift+R (Reset), S (Speed), C (Challenge), O (Observer in non-survival), Z (Mode), F (Setup in Sandbox), Esc (close dialogs), and in Survival: W/A/S/D movement plus 1/2/3 abilities.',
+    },
+    contextMode === 'manual'
+      ? {
+          title: 'Sandbox Workflow',
+          body: 'Drag rules from the Rule Library into the Active Zone, then tune behavior in Inspector. Use Setup to add entities and tune food spread.',
+        }
+      : contextMode === 'survival'
+        ? {
+            title: 'Survival Goals',
+            body: 'Pick one amoeba in Inspector and control it with WASD. Keep population above collapse, react to events, and use abilities when cooldowns are ready.',
+          }
+        : contextMode === 'auto'
+          ? {
+            title: 'Auto Mode Tips',
+            body: 'Choose a difficulty preset, watch ecosystem behavior, then open Difficulty anytime to rebalance food and terrain pressure.',
+          }
+          : {
+            title: 'Pick a Mode',
+            body: 'Survival: direct control + hazards. Auto: watch AI ecosystem with presets. Sandbox: drag rules and build behavior manually.',
+          },
+    {
+      title: 'What To Do First',
+      body: 'Choose a mode first, then press Start. Observe population and hunger in Inspector/Stats, then adjust mode settings if growth stalls.',
+    },
+  ];
+
+  let idx = 0;
+  const modal = document.createElement('div');
+  modal.id = 'onboarding-modal';
+  modal.className = 'challenge-panel';
+  modal.style.zIndex = '1202';
+
+  const close = () => {
+    modal.remove();
+    document.removeEventListener('keydown', onEsc);
+    try {
+      window.localStorage.setItem(ONBOARDING_SEEN_KEY, '1');
+    } catch {
+      // Ignore storage access errors.
+    }
+    onClose?.();
+  };
+
+  const onEsc = (e: KeyboardEvent) => {
+    if (e.code !== 'Escape') return;
+    e.preventDefault();
+    close();
+  };
+
+  const render = () => {
+    const step = steps[idx];
+    const isFirst = idx === 0;
+    const isLast = idx === steps.length - 1;
+    modal.innerHTML = `
+      <div class="cpanel-backdrop"></div>
+      <div class="cpanel-inner" style="max-width:640px">
+        <div class="cpanel-header">
+          <span class="cpanel-header-icon">🧭</span>
+          <h2 class="cpanel-title">GETTING STARTED</h2>
+          <p class="cpanel-subtitle">Step ${idx + 1} of ${steps.length}</p>
+          <button type="button" class="cpanel-close" id="onboarding-close" title="Close">✕</button>
+        </div>
+        <div class="cpanel-cards" style="display:block;max-width:560px;margin:0 auto;text-align:left">
+          <div class="cpanel-card" style="--card-color:#00F5FF">
+            <p class="cpanel-card-desc"><strong>${step.title}</strong></p>
+            <p class="cpanel-card-desc" style="margin-top:10px">${step.body}</p>
+            <div class="setup-actions" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+              <button type="button" class="btn setup-btn-close" id="onboarding-skip">Skip</button>
+              <button type="button" class="btn setup-btn-close" id="onboarding-prev" ${isFirst ? 'disabled' : ''}>Back</button>
+              <button type="button" class="btn setup-btn-apply" id="onboarding-next">${isLast ? 'Start Playing' : 'Next'}</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    modal.querySelector('.cpanel-backdrop')?.addEventListener('click', close);
+    modal.querySelector('#onboarding-close')?.addEventListener('click', close);
+    modal.querySelector('#onboarding-skip')?.addEventListener('click', close);
+    modal.querySelector('#onboarding-prev')?.addEventListener('click', () => {
+      if (idx === 0) return;
+      idx -= 1;
+      render();
+    });
+    modal.querySelector('#onboarding-next')?.addEventListener('click', () => {
+      if (idx >= steps.length - 1) {
+        close();
+        return;
+      }
+      idx += 1;
+      render();
+    });
+  };
+
+  render();
+  document.body.appendChild(modal);
+  document.addEventListener('keydown', onEsc);
+}
+
+function maybeOpenOnboardingOnce(onClose?: () => void): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (window.localStorage.getItem(ONBOARDING_SEEN_KEY) === '1') return false;
+  } catch {
+    // Ignore storage access errors and still show onboarding.
+  }
+  openOnboardingModal(null, onClose);
+  return true;
+}
 
 function tagSurvivalAgents(world: WorldState): void {
   for (const a of world.getByType('agent')) {
@@ -123,7 +246,7 @@ export function bootstrap(): void {
   document.body.classList.remove('app-booting');
 
   const modeModal = document.getElementById('mode-modal')!;
-  modeModal.classList.remove('hidden');
+  modeModal.classList.add('hidden');
   const autoDifficultyModal = document.getElementById('auto-difficulty-modal')!;
   const survivalDifficultyModal = document.getElementById('survival-difficulty-modal')!;
   const adiffClose = document.getElementById('adiff-close');
@@ -131,8 +254,14 @@ export function bootstrap(): void {
   const manualBtn = document.getElementById('mode-manual')!;
   const autoBtn   = document.getElementById('mode-auto')!;
   const survivalBtn = document.getElementById('mode-survival')!;
+  const onboardingBtn = document.getElementById('mode-onboarding');
   const btnMode   = document.getElementById('btn-mode') as HTMLButtonElement | null;
   const btnSetup  = document.getElementById('btn-setup') as HTMLButtonElement | null;
+  const openedOnboardingNow = maybeOpenOnboardingOnce(() => {
+    if (!hasStarted) modeModal.classList.remove('hidden');
+  });
+  if (!openedOnboardingNow) modeModal.classList.remove('hidden');
+  onboardingBtn?.addEventListener('click', () => openOnboardingModal(mode));
 
   let mode: SimMode | null = null;
   let hasStarted = false;
@@ -487,11 +616,11 @@ export function bootstrap(): void {
         activeZone.classList.add('active-zone--standard');
         if (btnSetup) btnSetup.style.display = 'none';
         if (btnObserver) btnObserver.style.display = 'none';
-        if (btnSpeedT) btnSpeedT.style.display = 'none';
+        if (btnSpeedT) btnSpeedT.style.display = '';
         forceBtnDisplay(btnStandardDiff, true);
         forceBtnDisplay(btnScore, true);
         forceBtnDisplay(btnSurvManual, true);
-        controls.setSpeedVisible(false);
+        controls.setSpeedVisible(true);
         if (kbdHint) kbdHint.style.display = 'none';
         const setupModalEl = document.getElementById('setup-modal');
         setupModalEl?.classList.add('hidden');
@@ -831,6 +960,8 @@ export function bootstrap(): void {
     const statCount     = document.getElementById('stat-count') as HTMLElement | null;
 
     function uiLoop(): void {
+      (window as any).__vortexiaBlockSpeedShortcut =
+        mode === 'survival' && !!survivalRt?.playerAgentId;
       if (mode === 'manual') {
         const hasRules = world.getActiveRules().length > 0;
         activeZoneEl2.classList.toggle('has-rules', hasRules);
@@ -894,11 +1025,11 @@ export function bootstrap(): void {
       }
 
       if (mode === 'survival' && survivalRt) {
-        if (e.code === 'KeyW') survivalRt.keys.w = true;
-        if (e.code === 'KeyA') survivalRt.keys.a = true;
-        if (e.code === 'KeyS') survivalRt.keys.s = true;
-        if (e.code === 'KeyD') survivalRt.keys.d = true;
         if (survivalRt.playerAgentId) {
+          if (e.code === 'KeyW') survivalRt.keys.w = true;
+          if (e.code === 'KeyA') survivalRt.keys.a = true;
+          if (e.code === 'KeyS') survivalRt.keys.s = true;
+          if (e.code === 'KeyD') survivalRt.keys.d = true;
           if (e.code === 'Digit1') {
             e.preventDefault();
             survivalRt.tryShield();
@@ -918,7 +1049,7 @@ export function bootstrap(): void {
     });
 
     document.addEventListener('keyup', (e: KeyboardEvent) => {
-      if (mode !== 'survival' || !survivalRt) return;
+      if (mode !== 'survival' || !survivalRt || !survivalRt.playerAgentId) return;
       if (e.code === 'KeyW') survivalRt.keys.w = false;
       if (e.code === 'KeyA') survivalRt.keys.a = false;
       if (e.code === 'KeyS') survivalRt.keys.s = false;

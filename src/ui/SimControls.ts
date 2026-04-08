@@ -139,6 +139,7 @@ export class SimControls {
       }
       if (e.code === 'KeyS') {
         if (this.speedHidden) return;
+        if ((window as any).__vortexiaBlockSpeedShortcut === true) return;
         e.preventDefault();
         this._cycleSpeed();
       }

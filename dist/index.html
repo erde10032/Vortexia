@@ -2234,6 +2234,11 @@
       flex-direction: column;
       gap: 16px;
     }
+    .mode-secondary-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+    }
 
     .mode-btn {
       position: relative;
@@ -2343,6 +2348,34 @@
     }
     .mode-btn-manual .mode-btn-icon { color: var(--purple); }
     .mode-btn-manual .mode-btn-arrow { color: var(--purple); }
+
+    /* Helper action button in menu (not a mode selector) */
+    .menu-help-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(120, 170, 230, 0.36);
+      background: linear-gradient(135deg, rgba(120, 160, 220, 0.12), rgba(76, 118, 194, 0.08));
+      color: rgba(214, 234, 255, 0.92);
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+    .menu-help-btn:hover {
+      transform: translateY(-1px);
+      border-color: rgba(180, 220, 255, 0.62);
+      background: linear-gradient(135deg, rgba(120, 160, 220, 0.2), rgba(76, 118, 194, 0.14));
+      box-shadow: 0 0 18px rgba(120, 170, 230, 0.18);
+    }
+    .menu-help-btn-icon {
+      font-size: 14px;
+      line-height: 1;
+    }
 
     /* ── Version tag ── */
     .menu-version {
@@ -4063,10 +4096,199 @@
       visibility: hidden;
     }
 
+    /* Mobile / touch-first devices: desktop-only splash */
+    #mobile-desktop-only {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 30000;
+      background:
+        radial-gradient(120% 80% at 50% 0%, rgba(0, 245, 255, 0.16), rgba(0, 0, 0, 0)),
+        linear-gradient(180deg, #060b14 0%, #070f1d 100%);
+      color: var(--text);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-align: center;
+    }
+    .mobile-only-card {
+      width: min(560px, 94vw);
+      border-radius: 16px;
+      border: 1px solid rgba(0, 245, 255, 0.25);
+      background: rgba(8, 18, 36, 0.72);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45), 0 0 28px rgba(0, 245, 255, 0.12);
+      padding: 24px 20px;
+      backdrop-filter: blur(10px);
+    }
+    .mobile-only-title {
+      margin: 0 0 8px;
+      font-size: 24px;
+      letter-spacing: 0.08em;
+      color: var(--cyan);
+    }
+    .mobile-only-desc {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(210, 232, 255, 0.9);
+    }
+
+    #desktop-width-hint {
+      position: fixed;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%) translateY(12px);
+      width: min(620px, calc(100vw - 22px));
+      border-radius: 10px;
+      border: 1px solid rgba(120, 170, 230, 0.3);
+      background: rgba(6, 14, 28, 0.84);
+      color: rgba(220, 236, 255, 0.92);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(8px);
+      padding: 10px 12px;
+      z-index: 1201;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    #desktop-width-hint.desktop-width-hint--visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+    .desktop-width-hint__text {
+      flex: 1;
+      font-size: 12px;
+      line-height: 1.35;
+      letter-spacing: 0.02em;
+    }
+    .desktop-width-hint__close {
+      border: 1px solid rgba(150, 190, 240, 0.34);
+      background: rgba(120, 160, 220, 0.1);
+      color: rgba(220, 236, 255, 0.96);
+      border-radius: 7px;
+      font-size: 11px;
+      line-height: 1;
+      padding: 6px 8px;
+      cursor: pointer;
+    }
+    .desktop-width-hint__close:hover {
+      border-color: rgba(180, 210, 255, 0.56);
+      background: rgba(120, 160, 220, 0.18);
+    }
+
+    body.mobile-device #mobile-desktop-only { display: flex; }
+    body.mobile-device #app,
+    body.mobile-device #mode-modal,
+    body.mobile-device #auto-difficulty-modal,
+    body.mobile-device #survival-difficulty-modal,
+    body.mobile-device #setup-modal,
+    body.mobile-device #game-slot-modal,
+    body.mobile-device #asset-loading-splash {
+      display: none !important;
+    }
+    body.mobile-device { overflow: hidden; }
+
+    /* Small desktop screens */
+    @media (max-width: 1440px) and (min-width: 901px) {
+      :root {
+        --panel-w: 232px;
+      }
+      #toolbar {
+        gap: 8px;
+        padding: 0 12px;
+      }
+      .btn {
+        padding: 6px 10px;
+        font-size: 11px;
+      }
+      .toolbar-stats {
+        margin-left: auto;
+      }
+      .kbd-hint {
+        display: none;
+      }
+    }
+
+    @media (max-width: 1220px) and (min-width: 901px) {
+      :root {
+        --panel-w: 208px;
+      }
+      .toolbar-brand-text {
+        font-size: 12px;
+      }
+      #toolbar {
+        flex-wrap: wrap;
+        align-content: center;
+        min-height: 64px;
+        height: auto;
+        padding-top: 6px;
+        padding-bottom: 6px;
+      }
+      #app {
+        grid-template-rows: auto 1fr;
+      }
+      .toolbar-sep {
+        display: none;
+      }
+      .toolbar-stats {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+
+    @media (max-width: 1040px) and (min-width: 901px) {
+      :root {
+        --panel-w: 180px;
+      }
+      .panel-header {
+        padding: 10px 10px 8px;
+      }
+      .panel-title {
+        font-size: 11px;
+      }
+      .panel-subtitle {
+        font-size: 9px;
+      }
+      #active-zone {
+        width: min(420px, calc(100vw - 420px));
+      }
+    }
+
   </style>
-  <script type="module" crossorigin src="/assets/index-BxH7YTKz.js"></script>
+  <script type="module" crossorigin src="/assets/index-hu0JL-oa.js"></script>
 </head>
 <body class="app-booting">
+  <script>
+    (function () {
+      const ua = navigator.userAgent || '';
+      const mobileUA = /Android|iPhone|iPad|iPod|Windows Phone|webOS|BlackBerry|Opera Mini|IEMobile/i.test(ua);
+      const touchOnly = (navigator.maxTouchPoints || 0) > 0
+        && window.matchMedia('(pointer: coarse)').matches
+        && window.matchMedia('(hover: none)').matches;
+      if (mobileUA && touchOnly) {
+        document.body.classList.add('mobile-device');
+      }
+    })();
+  </script>
+  <div id="mobile-desktop-only" aria-live="polite">
+    <div class="mobile-only-card">
+      <h1 class="mobile-only-title">Desktop Only</h1>
+      <p class="mobile-only-desc">
+        Vortexia currently supports desktop experience only.<br />
+        Please open the game on a laptop or desktop browser.
+      </p>
+    </div>
+  </div>
+  <div id="desktop-width-hint" aria-live="polite" role="status">
+    <div class="desktop-width-hint__text">
+      For best desktop experience, widen the window. Very narrow widths may compress parts of the UI.
+    </div>
+    <button type="button" class="desktop-width-hint__close" id="desktop-width-hint-close" aria-label="Dismiss width hint">Dismiss</button>
+  </div>
   <div id="asset-loading-splash" class="asset-loading-splash" aria-hidden="true" role="status">
     <div class="asset-loading-splash__backdrop" aria-hidden="true"></div>
     <div class="asset-loading-splash__card">
@@ -4324,6 +4546,12 @@
             <span class="mode-btn-hint">Full control · build your own rules</span>
           </span>
           <span class="mode-btn-arrow">→</span>
+        </button>
+      </div>
+      <div class="mode-secondary-actions">
+        <button id="mode-onboarding" class="menu-help-btn" type="button">
+          <span class="menu-help-btn-icon">🧭</span>
+          <span>How to Play</span>
         </button>
       </div>
 
