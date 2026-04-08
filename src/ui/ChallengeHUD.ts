@@ -87,7 +87,28 @@ export class ChallengeHUD {
 
     const onStart = (e: SimEvent<{ missionId: string }>) => {
       const mission = ALL_MISSIONS.find(m => m.id === e.data.missionId);
-      if (mission) this._show(mission);
+      if (mission) {
+        this._show(mission);
+        return;
+      }
+      // Allow tutorial / custom missions not listed in ALL_MISSIONS.
+      this._show({
+        id: e.data.missionId,
+        title: 'TRAINING',
+        subtitle: 'Tutorial mission',
+        description: '',
+        objective: 'Complete the tutorial objective',
+        icon: '🎯',
+        color: '#FFD700',
+        timeLimitSec: 60,
+        holdSec: 0,
+        maxScore: 1000,
+        requiredRules: [],
+        condition: () => 0,
+        success: () => false,
+        failure: () => false,
+        score: () => ({ base: 0, timeBonus: 0, efficiency: 0, total: 0 }),
+      } as Mission);
     };
 
     const onTick = (e: SimEvent<{ missionId: string; progress: number; ctx: ChallengeContext }>) => {
@@ -129,11 +150,19 @@ export class ChallengeHUD {
     const title     = this.el.querySelector<HTMLElement>('#chud-title')!;
     const objective = this.el.querySelector<HTMLElement>('#chud-objective')!;
     const splash    = this.el.querySelector<HTMLElement>('#chud-splash')!;
+    const timerWrap = this.el.querySelector<HTMLElement>('.chud-timer-wrap')!;
 
     icon.textContent      = mission.icon;
     title.textContent     = mission.title;
     objective.textContent = mission.objective;
     splash.style.display  = 'none';
+
+    // Tutorial missions can opt out of timer display.
+    if (mission.id === 'tutorial_kill2') {
+      timerWrap.style.display = 'none';
+    } else {
+      timerWrap.style.display = '';
+    }
 
     // Reset progress
     this._setProgress(0);

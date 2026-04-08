@@ -17,7 +17,7 @@ const GAME_YEAR_REAL_MS = 60_000;
 const REP_ABILITY_COOLDOWN_MS = REP_ABILITY_COOLDOWN_YEARS * GAME_YEAR_REAL_MS;
 const EAT_CD_MS = 3000;
 const ATTRACT_DAMAGE_RADIUS = 250;
-const COLLISION_R = 14;
+const COLLISION_R = 20;
 const VICTORY_AGENTS = 50;
 
 export interface ShadowStone {
@@ -162,11 +162,19 @@ export class SurvivalRuntime {
     if (!id) return;
     const e = this.world.getEntity(id);
     if (!e || e.type !== 'agent') return;
+    // Infected amoeba cannot be taken under player control until recovery.
+    if (this.isPlagueInfected(e)) {
+      this.playerAgentId = null;
+      return;
+    }
     e.meta.playerControlled = true;
     e.meta.survival = true;
     e.meta.survivalBaseMaxSpeed = e.maxSpeed;
+    // Drop any previous AI/plague momentum when control is transferred to player.
+    e.velocity.x = 0;
+    e.velocity.y = 0;
     // Player-controlled amoeba should NOT move autonomously.
-    // Allow only the vortex pull rule (auto-attraction) to influence it.
+    // Disable all autonomous steering rules while player controls the amoeba.
     e.meta.disabledRules = [
       'auto-flocking',
       'auto-hunger-seek',
@@ -415,10 +423,20 @@ export class SurvivalRuntime {
       a.health = Math.max(0, Math.min(100, hp));
     }
 
-    if (this.gameYear >= this.plagueEndGameYear) {
+    if (this.plagueEndGameYear > 0 && this.gameYear >= this.plagueEndGameYear) {
       for (const a of this.world.getByType('agent')) {
+        const baseMax = a.meta.survivalPlagueBaseMaxSpeed as number | undefined;
+        const baseMass = a.meta.survivalPlagueBaseMass as number | undefined;
+        const baseEnergy = a.meta.survivalPlagueBaseEnergy as number | undefined;
+        if (baseMax !== undefined) a.maxSpeed = baseMax;
+        if (baseMass !== undefined) a.mass = baseMass;
+        if (baseEnergy !== undefined) a.energy = baseEnergy;
+        delete a.meta.survivalPlagueBaseMaxSpeed;
+        delete a.meta.survivalPlagueBaseMass;
+        delete a.meta.survivalPlagueBaseEnergy;
         delete a.meta.survivalPlague;
       }
+      this.plagueEndGameYear = 0;
     }
 
     const now = performance.now();
@@ -447,6 +465,7 @@ export class SurvivalRuntime {
           const isPlayer = a.id === this.playerAgentId;
           if (isPlayer && shieldOn) {
             this.shieldEndReal = 0;
+            this.world.events.emit('survival:shield-block', { entityId: a.id }, this.world.tick);
           } else {
             a.health = Math.max(0, a.health - rockDmg);
           }
@@ -485,29 +504,37 @@ export class SurvivalRuntime {
   }
 
   private applyPlagueMutation(a: Entity): void {
-    const s = 1;
+    // Temporary "crazy" behavior: stats and movement fluctuate while infected.
+    // All baseline stats are restored in recovery block above.
+    const baseMax = Number(a.meta.survivalPlagueBaseMaxSpeed ?? a.maxSpeed);
+    const baseMass = Number(a.meta.survivalPlagueBaseMass ?? a.mass);
+    const baseEnergy = Number(a.meta.survivalPlagueBaseEnergy ?? a.energy);
+    const t = performance.now() * 0.008 + (a.id.length % 17) * 0.33;
+    const pulseA = Math.sin(t);
+    const pulseB = Math.cos(t * 1.7);
     const rand = () => Math.random() * 2 - 1;
-    a.velocity.x += rand() * 20 * s;
-    a.velocity.y += rand() * 20 * s;
-    a.maxSpeed = Math.max(10, a.maxSpeed + rand() * 5 * s);
-    a.energy = Math.max(0, a.energy + rand() * 2 * s);
-    a.mass = Math.max(0.1, a.mass + rand() * 0.35 * s);
+
+    a.maxSpeed = Math.max(20, baseMax * (1 + 0.55 * pulseA + 0.18 * rand()));
+    a.mass = Math.max(0.2, baseMass * (1 + 0.40 * pulseB + 0.12 * rand()));
+    a.energy = Math.max(5, Math.min(300, baseEnergy * (1 + 0.45 * pulseA - 0.20 * pulseB + 0.10 * rand())));
+    a.velocity.x += rand() * 18;
+    a.velocity.y += rand() * 18;
   }
 
   private triggerRandomEvent(): void {
     const picks = ['rockfall', 'vortex', 'plague'] as const;
     const which = picks[(Math.random() * 3) | 0];
-    if (which === 'rockfall') this.startRockfall();
-    else if (which === 'vortex') this.startVortex();
-    else this.startPlague();
+    if (which === 'rockfall') this.startRockfall(true);
+    else if (which === 'vortex') this.startVortex(true);
+    else this.startPlague(true);
   }
 
   private shadowDurationSec(): number {
     return this.difficulty === 'easy' ? 10 : this.difficulty === 'medium' ? 5 : 2;
   }
 
-  private startRockfall(): void {
-    this.world.events.emit('survival:event', { name: 'Rockfall' }, this.world.tick);
+  private startRockfall(emitBanner = true): void {
+    if (emitBanner) this.world.events.emit('survival:event', { name: 'Rockfall' }, this.world.tick);
     const sec = this.shadowDurationSec();
     const count = this.difficulty === 'easy' ? 3 : this.difficulty === 'medium' ? 5 : 8;
     const stagger = 0.55;
@@ -535,8 +562,8 @@ export class SurvivalRuntime {
     this.falling.push({ wx, wy, progress: 0, fallDur: 0.4 });
   }
 
-  private startVortex(): void {
-    this.world.events.emit('survival:event', { name: 'Vortex surge' }, this.world.tick);
+  private startVortex(emitBanner = true): void {
+    if (emitBanner) this.world.events.emit('survival:event', { name: 'Vortex surge' }, this.world.tick);
     const r = this.world.getRule('auto-attraction');
     if (!r) return;
     if (this.storedGoalSeekStrength === null) {
@@ -547,8 +574,8 @@ export class SurvivalRuntime {
     this.vortexEventUntilReal = performance.now() + 28_000 / simSpeed;
   }
 
-  private startPlague(): void {
-    this.world.events.emit('survival:event', { name: 'Plague' }, this.world.tick);
+  private startPlague(emitBanner = true): void {
+    if (emitBanner) this.world.events.emit('survival:event', { name: 'Plague' }, this.world.tick);
     const pct = this.difficulty === 'easy' ? 0.3 : this.difficulty === 'medium' ? 0.5 : 0.8;
     const agents = this.world
       .getByType('agent')
@@ -556,7 +583,11 @@ export class SurvivalRuntime {
     const n = Math.max(0, Math.floor(agents.length * pct));
     const shuffled = [...agents].sort(() => Math.random() - 0.5);
     for (let i = 0; i < n; i++) {
-      shuffled[i].meta.survivalPlague = true;
+      const a = shuffled[i];
+      a.meta.survivalPlague = true;
+      if (a.meta.survivalPlagueBaseMaxSpeed === undefined) a.meta.survivalPlagueBaseMaxSpeed = a.maxSpeed;
+      if (a.meta.survivalPlagueBaseMass === undefined) a.meta.survivalPlagueBaseMass = a.mass;
+      if (a.meta.survivalPlagueBaseEnergy === undefined) a.meta.survivalPlagueBaseEnergy = a.energy;
     }
     this.plagueEndGameYear = this.gameYear + 6;
   }
